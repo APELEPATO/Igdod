@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ഇൻസ്റ്റാഗ്രാം ഡൗൺലോഡർ</title>
+    <title>ഇൻസ്റ്റാഗ്രാം ഡൗൺലോഡർ (പുതിയത്)</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts - Inter -->
@@ -70,80 +70,55 @@
         });
 
         async function handleDownload() {
-            const url = urlInput.value.trim();
-            if (!url) {
+            const postUrl = urlInput.value.trim();
+            if (!postUrl) {
                 showError('ദയവായി ഒരു ഇൻസ്റ്റാഗ്രാം ലിങ്ക് നൽകുക.');
                 return;
             }
 
-            // URL-ന്റെ അവസാനം '/' ഉണ്ടെങ്കിൽ അത് ഒഴിവാക്കുന്നു
-            const cleanUrl = url.endsWith('/') ? url.slice(0, -1) : url;
-            // JSON ഡാറ്റ ലഭിക്കുന്നതിനായി URL പരിഷ്കരിക്കുന്നു
-            const apiUrl = `${cleanUrl}/?__a=1&__d=dis`;
-
             showLoading();
 
             try {
-                // ഇൻസ്റ്റാഗ്രാമിൽ നിന്ന് ഡാറ്റ എടുക്കാൻ ശ്രമിക്കുന്നു
-                const response = await fetch(apiUrl);
+                // ഡാറ്റ ലഭിക്കുന്നതിനായി ഒരു വിശ്വസനീയമായ API ഉപയോഗിക്കുന്നു
+                const response = await fetch('https://co.wuk.sh/api/json', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        url: postUrl
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.status === 'error') {
+                    showError(data.text || 'ലിങ്ക് പ്രോസസ്സ് ചെയ്യുന്നതിൽ പരാജയപ്പെട്ടു. ലിങ്ക് ശരിയാണോ എന്ന് പരിശോധിക്കുക.');
+                    return;
+                }
                 
-                if (!response.ok) {
-                    // ഇൻസ്റ്റാഗ്രാമിന്റെ സെർവറിൽ നിന്ന് നേരിട്ട് ഡാറ്റ എടുക്കാൻ സാധിക്കാത്തതുകൊണ്ട് ഒരു പ്രോക്സി ഉപയോഗിക്കുന്നു
-                    // ഇത് ഇൻസ്റ്റാഗ്രാമിന്റെ CORS പോളിസി മറികടക്കാൻ സഹായിക്കും
-                    console.warn("നേരിട്ടുള്ള ഫെച്ച് പരാജയപ്പെട്ടു. പ്രോക്സി ഉപയോഗിച്ച് വീണ്ടും ശ്രമിക്കുന്നു...");
-                    const proxyResponse = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(apiUrl)}`);
-                    const proxyData = await proxyResponse.json();
-                    const data = JSON.parse(proxyData.contents);
-                    processData(data);
+                // API-യിൽ നിന്ന് ലഭിക്കുന്ന ഡൗൺലോഡ് ലിങ്ക്
+                const downloadUrl = data.url;
+
+                // ലിങ്ക് ഒരു വീഡിയോ ആണോ എന്ന് പരിശോധിക്കുന്നു
+                if (downloadUrl.includes('.mp4') || data.status === 'stream') {
+                    displayVideo(downloadUrl);
                 } else {
-                    const data = await response.json();
-                    processData(data);
+                    displayImage(downloadUrl);
                 }
 
             } catch (error) {
-                console.error('ഡാറ്റ ലഭിക്കുന്നതിൽ പിശക്:', error);
-                showError('ഈ ലിങ്കിൽ നിന്ന് ഡാറ്റ ലഭിക്കുന്നതിൽ പരാജയപ്പെട്ടു. ഇതൊരു പ്രൈവറ്റ് അക്കൗണ്ട് ആണോയെന്ന് പരിശോധിക്കുക, അല്ലെങ്കിൽ ലിങ്ക് ശരിയാണോയെന്ന് ഉറപ്പുവരുത്തുക.');
+                console.error('API വിളിക്കുന്നതിൽ പിശക്:', error);
+                showError('ഒരു അപ്രതീക്ഷിത പിശക് സംഭവിച്ചു. ദയവായി അല്പസമയം കഴിഞ്ഞ് വീണ്ടും ശ്രമിക്കുക.');
             }
         }
-        
-        function processData(data) {
-            // JSON ഡാറ്റയിൽ നിന്ന് മീഡിയ കണ്ടെത്തുന്നു
-            const media = data?.graphql?.shortcode_media;
-            if (!media) {
-                 media = data?.items?.[0];
-            }
-            if (!media) {
-                showError('ഈ ലിങ്കിൽ നിന്ന് ഫോട്ടോയോ വീഡിയോയോ കണ്ടെത്താനായില്ല.');
-                return;
-            }
-
-            // വീഡിയോ ആണോ ഫോട്ടോ ആണോ എന്ന് പരിശോധിക്കുന്നു
-            if (media.is_video) {
-                const videoUrl = media.video_url;
-                if (videoUrl) {
-                    displayVideo(videoUrl);
-                } else {
-                    showError('വീഡിയോ ലിങ്ക് കണ്ടെത്താനായില്ല.');
-                }
-            } else {
-                // ഒന്നിൽ കൂടുതൽ ഫോട്ടോകൾ ഉണ്ടോ എന്ന് പരിശോധിക്കുന്നു (Carousel)
-                if (media.edge_sidecar_to_children) {
-                    const firstImage = media.edge_sidecar_to_children.edges[0].node.display_url;
-                    displayImage(firstImage);
-                } else {
-                    const imageUrl = media.display_url;
-                    if (imageUrl) {
-                        displayImage(imageUrl);
-                    } else {
-                        showError('ഫോട്ടോ ലിങ്ക് കണ്ടെത്താനായില്ല.');
-                    }
-                }
-            }
-        }
-
 
         function showLoading() {
-            resultDiv.innerHTML = '<div class="loader"></div><p class="ml-4 text-gray-600">ഡാറ്റ ലോഡ് ചെയ്യുന്നു...</p>';
+            resultDiv.innerHTML = `<div class="flex items-center justify-center">
+                                       <div class="loader"></div>
+                                       <p class="ml-4 text-gray-600">ഡാറ്റ ലോഡ് ചെയ്യുന്നു...</p>
+                                   </div>`;
         }
 
         function showError(message) {
@@ -174,7 +149,6 @@
                 </div>
             `;
         }
-
     </script>
 </body>
 </html>
