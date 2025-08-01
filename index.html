@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ml">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ഇൻസ്റ്റാഗ്രാം ഡൗൺലോഡർ</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts - Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* മലയാളം ഫോണ്ടിനായി ഒരു ഫാൾബാക്ക് ചേർക്കുന്നു */
+        body {
+            font-family: 'Inter', 'Manjari', sans-serif;
+        }
+        /* സ്പിന്നർ ആനിമേഷൻ */
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+    <div class="container mx-auto p-4 max-w-2xl">
+        <div class="bg-white rounded-xl shadow-lg p-6 md:p-8">
+            <!-- ഹെഡിംഗ് -->
+            <div class="text-center mb-6">
+                <h1 class="text-3xl md:text-4xl font-bold text-gray-800">ഇൻസ്റ്റാഗ്രാം ഡൗൺലോഡർ</h1>
+                <p class="text-gray-500 mt-2">ഫോട്ടോകളും വീഡിയോകളും എളുപ്പത്തിൽ ഡൗൺലോഡ് ചെയ്യാം</p>
+            </div>
+
+            <!-- ഇൻപുട്ട് ഫീൽഡ് -->
+            <div class="flex flex-col sm:flex-row gap-3 mb-4">
+                <input type="text" id="instagramUrl" placeholder="ഇവിടെ ഇൻസ്റ്റാഗ്രാം ലിങ്ക് പേസ്റ്റ് ചെയ്യുക..." class="flex-grow p-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
+                <button id="downloadBtn" class="bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg hover:bg-blue-700 transition-colors duration-300 shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    ഡൗൺലോഡ്
+                </button>
+            </div>
+
+            <!-- ഫലം കാണിക്കാനുള്ള ഇടം -->
+            <div id="result" class="mt-6 min-h-[200px] flex items-center justify-center bg-gray-50 rounded-lg p-4">
+                <p class="text-gray-400">നിങ്ങൾ നൽകുന്ന ലിങ്കിന്റെ പ്രിവ്യൂ ഇവിടെ കാണാം.</p>
+            </div>
+        </div>
+        <footer class="text-center mt-6 text-sm text-gray-500">
+            <p>ശ്രദ്ധിക്കുക: ഈ ടൂൾ പഠനാവശ്യങ്ങൾക്ക് വേണ്ടി മാത്രം നിർമ്മിച്ചതാണ്. പകർപ്പവകാശമുള്ള ഉള്ളടക്കം അനുവാദമില്ലാതെ ഡൗൺലോഡ് ചെയ്യുന്നത് നിയമവിരുദ്ധമാണ്.</p>
+        </footer>
+    </div>
+
+    <script>
+        const downloadBtn = document.getElementById('downloadBtn');
+        const urlInput = document.getElementById('instagramUrl');
+        const resultDiv = document.getElementById('result');
+
+        downloadBtn.addEventListener('click', handleDownload);
+        urlInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                handleDownload();
+            }
+        });
+
+        async function handleDownload() {
+            const url = urlInput.value.trim();
+            if (!url) {
+                showError('ദയവായി ഒരു ഇൻസ്റ്റാഗ്രാം ലിങ്ക് നൽകുക.');
+                return;
+            }
+
+            // URL-ന്റെ അവസാനം '/' ഉണ്ടെങ്കിൽ അത് ഒഴിവാക്കുന്നു
+            const cleanUrl = url.endsWith('/') ? url.slice(0, -1) : url;
+            // JSON ഡാറ്റ ലഭിക്കുന്നതിനായി URL പരിഷ്കരിക്കുന്നു
+            const apiUrl = `${cleanUrl}/?__a=1&__d=dis`;
+
+            showLoading();
+
+            try {
+                // ഇൻസ്റ്റാഗ്രാമിൽ നിന്ന് ഡാറ്റ എടുക്കാൻ ശ്രമിക്കുന്നു
+                const response = await fetch(apiUrl);
+                
+                if (!response.ok) {
+                    // ഇൻസ്റ്റാഗ്രാമിന്റെ സെർവറിൽ നിന്ന് നേരിട്ട് ഡാറ്റ എടുക്കാൻ സാധിക്കാത്തതുകൊണ്ട് ഒരു പ്രോക്സി ഉപയോഗിക്കുന്നു
+                    // ഇത് ഇൻസ്റ്റാഗ്രാമിന്റെ CORS പോളിസി മറികടക്കാൻ സഹായിക്കും
+                    console.warn("നേരിട്ടുള്ള ഫെച്ച് പരാജയപ്പെട്ടു. പ്രോക്സി ഉപയോഗിച്ച് വീണ്ടും ശ്രമിക്കുന്നു...");
+                    const proxyResponse = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(apiUrl)}`);
+                    const proxyData = await proxyResponse.json();
+                    const data = JSON.parse(proxyData.contents);
+                    processData(data);
+                } else {
+                    const data = await response.json();
+                    processData(data);
+                }
+
+            } catch (error) {
+                console.error('ഡാറ്റ ലഭിക്കുന്നതിൽ പിശക്:', error);
+                showError('ഈ ലിങ്കിൽ നിന്ന് ഡാറ്റ ലഭിക്കുന്നതിൽ പരാജയപ്പെട്ടു. ഇതൊരു പ്രൈവറ്റ് അക്കൗണ്ട് ആണോയെന്ന് പരിശോധിക്കുക, അല്ലെങ്കിൽ ലിങ്ക് ശരിയാണോയെന്ന് ഉറപ്പുവരുത്തുക.');
+            }
+        }
+        
+        function processData(data) {
+            // JSON ഡാറ്റയിൽ നിന്ന് മീഡിയ കണ്ടെത്തുന്നു
+            const media = data?.graphql?.shortcode_media;
+            if (!media) {
+                 media = data?.items?.[0];
+            }
+            if (!media) {
+                showError('ഈ ലിങ്കിൽ നിന്ന് ഫോട്ടോയോ വീഡിയോയോ കണ്ടെത്താനായില്ല.');
+                return;
+            }
+
+            // വീഡിയോ ആണോ ഫോട്ടോ ആണോ എന്ന് പരിശോധിക്കുന്നു
+            if (media.is_video) {
+                const videoUrl = media.video_url;
+                if (videoUrl) {
+                    displayVideo(videoUrl);
+                } else {
+                    showError('വീഡിയോ ലിങ്ക് കണ്ടെത്താനായില്ല.');
+                }
+            } else {
+                // ഒന്നിൽ കൂടുതൽ ഫോട്ടോകൾ ഉണ്ടോ എന്ന് പരിശോധിക്കുന്നു (Carousel)
+                if (media.edge_sidecar_to_children) {
+                    const firstImage = media.edge_sidecar_to_children.edges[0].node.display_url;
+                    displayImage(firstImage);
+                } else {
+                    const imageUrl = media.display_url;
+                    if (imageUrl) {
+                        displayImage(imageUrl);
+                    } else {
+                        showError('ഫോട്ടോ ലിങ്ക് കണ്ടെത്താനായില്ല.');
+                    }
+                }
+            }
+        }
+
+
+        function showLoading() {
+            resultDiv.innerHTML = '<div class="loader"></div><p class="ml-4 text-gray-600">ഡാറ്റ ലോഡ് ചെയ്യുന്നു...</p>';
+        }
+
+        function showError(message) {
+            resultDiv.innerHTML = `<div class="text-center text-red-600 bg-red-100 p-4 rounded-lg">
+                                       <h3 class="font-bold">ഒരു പിശക് സംഭവിച്ചു!</h3>
+                                       <p>${message}</p>
+                                   </div>`;
+        }
+
+        function displayImage(imageUrl) {
+            resultDiv.innerHTML = `
+                <div class="w-full text-center">
+                    <img src="${imageUrl}" alt="Instagram Post" class="max-w-full max-h-96 mx-auto rounded-lg shadow-md">
+                    <a href="${imageUrl}" download="instagram_photo.jpg" target="_blank" class="inline-block mt-4 bg-green-600 text-white font-semibold py-2 px-5 rounded-lg hover:bg-green-700 transition-colors">
+                        ഫോട്ടോ ഡൗൺലോഡ് ചെയ്യുക
+                    </a>
+                </div>
+            `;
+        }
+
+        function displayVideo(videoUrl) {
+            resultDiv.innerHTML = `
+                <div class="w-full text-center">
+                    <video controls class="max-w-full max-h-96 mx-auto rounded-lg shadow-md" src="${videoUrl}"></video>
+                    <a href="${videoUrl}" download="instagram_video.mp4" target="_blank" class="inline-block mt-4 bg-green-600 text-white font-semibold py-2 px-5 rounded-lg hover:bg-green-700 transition-colors">
+                        വീഡിയോ ഡൗൺലോഡ് ചെയ്യുക
+                    </a>
+                </div>
+            `;
+        }
+
+    </script>
+</body>
+</html>
